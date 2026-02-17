@@ -5,8 +5,8 @@ function connectToDB(){
     .then(()=>{
         console.log("server is connected to DB");
     })
-    .catch(()=>{
-        console.log("error to db")
+    .catch((err)=>{
+        console.log("error to db", err)
         process.exit(1);
     })
 }
