@@ -4,7 +4,7 @@
 # Dependency directories
 /node_modules/
 node_modules_linux/
-
+package.json
 # Local development configuration files
 /server/localdev-config.json
 /localdev-config.json
