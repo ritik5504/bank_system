@@ -113,31 +113,30 @@ async function createTransaction(req, res) {
         const session = await mongoose.startSession()
         session.startTransaction()
 
-        transaction = (await transactionModel.create([ {
+        transaction = (await transactionModel.create([{
             fromAccount,
             toAccount,
             amount,
             idempotencyKey,
             status: "PENDING"
-        } ], { session }))[ 0 ]
+        }], { session }))[0]
 
-        const debitLedgerEntry = await ledgerModel.create([ {
+        const debitLedgerEntry = await ledgerModel.create([{
             account: fromAccount,
             amount: amount,
             transaction: transaction._id,
             type: "DEBIT"
-        } ], { session })
+        }], { session })
 
-        await (() => {
-            return new Promise((resolve) => setTimeout(resolve, 15 * 1000));
-        })()
 
-        const creditLedgerEntry = await ledgerModel.create([ {
+
+
+        const creditLedgerEntry = await ledgerModel.create([{
             account: toAccount,
             amount: amount,
             transaction: transaction._id,
             type: "CREDIT"
-        } ], { session })
+        }], { session })
 
         await transactionModel.findOneAndUpdate(
             { _id: transaction._id },
@@ -208,19 +207,19 @@ async function createInitialFundsTransaction(req, res) {
         status: "PENDING"
     })
 
-    const debitLedgerEntry = await ledgerModel.create([ {
+    const debitLedgerEntry = await ledgerModel.create([{
         account: fromUserAccount._id,
         amount: amount,
         transaction: transaction._id,
         type: "DEBIT"
-    } ], { session })
+    }], { session })
 
-    const creditLedgerEntry = await ledgerModel.create([ {
+    const creditLedgerEntry = await ledgerModel.create([{
         account: toAccount,
         amount: amount,
         transaction: transaction._id,
         type: "CREDIT"
-    } ], { session })
+    }], { session })
 
     transaction.status = "COMPLETED"
     await transaction.save({ session })
@@ -236,7 +235,46 @@ async function createInitialFundsTransaction(req, res) {
 
 }
 
+/**
+ * - GET /api/transactions/
+ * - Fetch all transactions (ledger entries) for the authenticated user's accounts
+ */
+async function getUserTransactions(req, res) {
+    try {
+        // Get all accounts for this user
+        const userAccounts = await accountModel.find({ user: req.user._id });
+        const accountIds = userAccounts.map(acc => acc._id);
+
+        if (accountIds.length === 0) {
+            return res.status(200).json({ transactions: [] });
+        }
+
+        // Fetch ledger entries for those accounts, newest first
+        const ledgerEntries = await ledgerModel
+            .find({ account: { $in: accountIds } })
+            .sort({ createdAt: -1 })
+            .limit(50)
+            .populate('transaction');
+
+        const transactions = ledgerEntries.map(entry => ({
+            _id: entry._id,
+            type: entry.type,
+            amount: entry.amount,
+            account: entry.account,
+            transactionId: entry.transaction?._id,
+            status: entry.transaction?.status,
+            createdAt: entry.createdAt
+        }));
+
+        return res.status(200).json({ transactions });
+    } catch (error) {
+        console.error('Error fetching transactions:', error);
+        return res.status(500).json({ message: 'Failed to load transactions' });
+    }
+}
+
 module.exports = {
     createTransaction,
-    createInitialFundsTransaction
+    createInitialFundsTransaction,
+    getUserTransactions
 }

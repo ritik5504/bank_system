@@ -29,5 +29,12 @@ router.get("/", authMiddleware.authMiddleware, accountController.getUserAccounts
 router.get("/balance/:accountId", authMiddleware.authMiddleware, accountController.getAccountBalanceController)
 
 
+/**
+ * - DELETE /api/accounts/:accountId
+ * - Close/delete an account
+ * - Protected Route
+ */
+router.delete("/:accountId", authMiddleware.authMiddleware, accountController.deleteAccountController)
+
 
 module.exports = router

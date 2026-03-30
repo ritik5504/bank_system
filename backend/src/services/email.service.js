@@ -1,24 +1,32 @@
 const nodemailer = require('nodemailer');
 
-const transporter = nodemailer.createTransport({
-    service: 'gmail',
-    auth: {
-        type: 'OAuth2',
-        user: process.env.EMAIL_USER,
-        clientId: process.env.CLIENT_ID,
-        clientSecret: process.env.CLIENT_SECRET,
-        refreshToken: process.env.REFRESH_TOKEN,
-    },
-});
+// createTransport only if credentials are available
+let transporter;
+if (process.env.EMAIL_USER && process.env.EMAIL_PASSWORD) {
+    transporter = nodemailer.createTransport({
+        service: 'gmail',
+        auth: {
+            user: process.env.EMAIL_USER,
+            pass: process.env.EMAIL_PASSWORD,
+        },
+    });
+} else {
+    console.warn('EMAIL_USER or EMAIL_PASSWORD not defined; email functionality will be disabled.\n' +
+                 'Please create a .env file with these variables or set them in your environment.');
+    // create a dummy transporter to avoid runtime errors when calling sendMail
+    transporter = { sendMail: async () => { throw new Error('Email transporter not configured'); } };
+}
 
-// Verify the connection configuration
-transporter.verify((error, success) => {
-    if (error) {
-        console.error('Error connecting to email server:', error);
-    } else {
-        console.log('Email server is ready to send messages');
-    }
-});
+// Verify the connection configuration (only if transporter is a real one)
+if (transporter && transporter.verify && typeof transporter.verify === 'function') {
+    transporter.verify((error, success) => {
+        if (error) {
+            console.error('Error connecting to email server:', error);
+        } else {
+            console.log('Email server is ready to send messages');
+        }
+    });
+}
 
 
 // Function to send email
