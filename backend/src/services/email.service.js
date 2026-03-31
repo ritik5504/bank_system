@@ -1,6 +1,9 @@
 const { Resend } = require('resend');
 
-const resendApiKey = process.env.RESEND_API_KEY || 're_ECYhxn5y_8ifDNyjXEAxXXpNdvk9VD4tM';
+const resendApiKey = process.env.RESEND_API_KEY;
+if (!resendApiKey) {
+    console.warn("RESEND_API_KEY is missing from environment variables!");
+}
 const resend = new Resend(resendApiKey);
 
 // Function to send email via Resend HTTP API
