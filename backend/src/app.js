@@ -24,10 +24,18 @@ app.use(cors({
     // Allow requests with no origin (Postman, mobile apps)
     if (!origin) return callback(null, true);
 
-    if (allowedOrigins.includes(origin)) {
+    const isLocalhost = origin.startsWith('http://localhost:') || origin.startsWith('http://127.0.0.1:');
+
+    if (
+      allowedOrigins.includes(origin) || 
+      isLocalhost ||
+      origin.endsWith('.vercel.app') || 
+      (process.env.FRONTEND_URL && origin === process.env.FRONTEND_URL)
+    ) {
       return callback(null, true);
     } else {
-      return callback(new Error("Not allowed by CORS"));
+      console.error(`Origin blocked by CORS: ${origin}`);
+      return callback(new Error(`Not allowed by CORS: ${origin}`));
     }
   },
   credentials: true,

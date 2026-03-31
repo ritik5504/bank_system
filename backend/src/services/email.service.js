@@ -72,8 +72,27 @@ async function sendTransactionFailureEmail(userEmail, name, amount, toAccount) {
     await sendEmail(userEmail, subject, text, html);
 }
 
+async function sendOtpEmail(userEmail, name, otp) {
+    const subject = 'Your Verification OTP - Backend Ledger';
+    const text = `Hello ${name || 'User'},\n\nYour One-Time Password (OTP) for Verification is: ${otp}\n\nThis OTP is valid for 5 minutes. Do not share this code with anyone.\n\nBest regards,\nThe Backend Ledger Team`;
+    const html = `
+        <div style="font-family: Arial, sans-serif; padding: 20px; color: #333;">
+            <h2>Verification Required</h2>
+            <p>Hello ${name || 'User'},</p>
+            <p>Your One-Time Password (OTP) is:</p>
+            <h1 style="background: #f4f4f4; padding: 10px; text-align: center; letter-spacing: 5px; color: #2563eb;">${otp}</h1>
+            <p>This OTP is valid for <strong>5 minutes</strong>. Do not share this code with anyone.</p>
+            <br/>
+            <p>Best regards,<br>The Backend Ledger Team</p>
+        </div>
+    `;
+
+    await sendEmail(userEmail, subject, text, html);
+}
+
 module.exports = {
     sendRegistrationEmail,
     sendTransactionEmail,
-    sendTransactionFailureEmail
+    sendTransactionFailureEmail,
+    sendOtpEmail
 };

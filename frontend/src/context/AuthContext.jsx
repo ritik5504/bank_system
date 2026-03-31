@@ -25,9 +25,13 @@ export const AuthProvider = ({ children }) => {
         setLoading(false);
     }, []);
 
-    const login = async (email, password) => {
+    // Direct Login (No OTP)
+    const login = async (identifier, password) => {
         try {
-            const data = await api.post('/auth/login', { email, password });
+            const isEmail = identifier.includes('@');
+            const payload = isEmail ? { email: identifier } : { customerId: identifier };
+            
+            const data = await api.post('/auth/login', { ...payload, password });
             const token = data.token || data.accessToken;
 
             if (token && data.user) {
@@ -46,9 +50,22 @@ export const AuthProvider = ({ children }) => {
         }
     };
 
-    const register = async (name, email, password) => {
+    // Initiates Registration - Sends OTP
+    const registerInit = async (name, email, password) => {
         try {
-            const data = await api.post('/auth/register', { name, email, password });
+            await api.post('/auth/register', { name, email, password });
+            addToast('OTP sent to your email!', 'info');
+            return { success: true };
+        } catch (error) {
+            addToast(error.message || 'Registration failed', 'error');
+            return { success: false };
+        }
+    };
+
+    // Verifies Registration OTP
+    const registerVerify = async (name, email, password, otp) => {
+        try {
+            const data = await api.post('/auth/verify-register', { name, email, password, otp });
             const customerId = data.user?.customerId;
             if (customerId) {
                 addToast(`Registration successful! Your Customer ID: ${customerId}`, 'success', 10000);
@@ -57,7 +74,7 @@ export const AuthProvider = ({ children }) => {
             }
             return { success: true, customerId };
         } catch (error) {
-            addToast(error.message || 'Registration failed', 'error');
+            addToast(error.message || 'Verification failed', 'error');
             return { success: false };
         }
     };
@@ -76,7 +93,7 @@ export const AuthProvider = ({ children }) => {
     };
 
     return (
-        <AuthContext.Provider value={{ user, login, register, logout, loading }}>
+        <AuthContext.Provider value={{ user, login, registerInit, registerVerify, logout, loading }}>
             {!loading && children}
         </AuthContext.Provider>
     );
