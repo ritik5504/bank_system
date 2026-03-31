@@ -1,52 +1,30 @@
-const nodemailer = require('nodemailer');
+const { Resend } = require('resend');
 
-// createTransport only if credentials are available
-let transporter;
-if (process.env.EMAIL_USER && process.env.EMAIL_PASSWORD) {
-    transporter = nodemailer.createTransport({
-        service: 'gmail',
-        auth: {
-            user: process.env.EMAIL_USER,
-            pass: process.env.EMAIL_PASSWORD,
-        },
-    });
-} else {
-    console.warn('EMAIL_USER or EMAIL_PASSWORD not defined; email functionality will be disabled.\n' +
-                 'Please create a .env file with these variables or set them in your environment.');
-    // create a dummy transporter to avoid runtime errors when calling sendMail
-    transporter = { sendMail: async () => { throw new Error('Email transporter not configured'); } };
-}
+const resendApiKey = process.env.RESEND_API_KEY || 're_ECYhxn5y_8ifDNyjXEAxXXpNdvk9VD4tM';
+const resend = new Resend(resendApiKey);
 
-// Verify the connection configuration (only if transporter is a real one)
-if (transporter && transporter.verify && typeof transporter.verify === 'function') {
-    transporter.verify((error, success) => {
-        if (error) {
-            console.error('Error connecting to email server:', error);
-        } else {
-            console.log('Email server is ready to send messages');
-        }
-    });
-}
-
-
-// Function to send email
+// Function to send email via Resend HTTP API
 const sendEmail = async (to, subject, text, html) => {
     try {
-        const info = await transporter.sendMail({
-            from: `"Backend Ledger" <${process.env.EMAIL_USER}>`, // sender address
-            to, // list of receivers
-            subject, // Subject line
-            text, // plain text body
-            html, // html body
+        const { data, error } = await resend.emails.send({
+            // Free Resend tier requires this exact 'from' address
+            from: 'Backend Ledger <onboarding@resend.dev>',
+            to: to,
+            subject: subject,
+            text: text,
+            html: html,
         });
 
-        console.log('Message sent: %s', info.messageId);
-        console.log('Preview URL: %s', nodemailer.getTestMessageUrl(info));
+        if (error) {
+            console.error('Resend API Error:', error);
+            return;
+        }
+
+        console.log('Message sent via Resend successfully:', data);
     } catch (error) {
         console.error('Error sending email:', error);
     }
 };
-
 
 async function sendRegistrationEmail(userEmail, name) {
     const subject = 'Welcome to Backend Ledger!';
