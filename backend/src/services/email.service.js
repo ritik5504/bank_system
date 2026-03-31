@@ -1,32 +1,58 @@
-const { Resend } = require('resend');
+const https = require('https');
 
-const resendApiKey = process.env.RESEND_API_KEY;
-if (!resendApiKey) {
-    console.warn("RESEND_API_KEY is missing from environment variables!");
-}
-const resend = new Resend(resendApiKey);
-
-// Function to send email via Resend HTTP API
+// Function to send email via Brevo native HTTP API (no external libraries needed)
 const sendEmail = async (to, subject, text, html) => {
-    try {
-        const { data, error } = await resend.emails.send({
-            // Free Resend tier requires this exact 'from' address
-            from: 'Backend Ledger <onboarding@resend.dev>',
-            to: to,
-            subject: subject,
-            text: text,
-            html: html,
+    // IMPORTANT: It will use the local env variable when deployed
+    const apiKey = process.env.BREVO_API_KEY;
+    const fromEmail = process.env.EMAIL_USER || 'rajsahil5504@gmail.com'; 
+
+    if (!process.env.BREVO_API_KEY) {
+        console.warn("BREVO_API_KEY is not explicitly set in environment variables!");
+    }
+
+    const postData = JSON.stringify({
+        sender: { name: "Backend Ledger", email: fromEmail },
+        to: [{ email: to }],
+        subject: subject,
+        htmlContent: html,
+        textContent: text
+    });
+
+    const options = {
+        hostname: 'api.brevo.com',
+        path: '/v3/smtp/email',
+        method: 'POST',
+        headers: {
+            'accept': 'application/json',
+            'api-key': apiKey,
+            'content-type': 'application/json',
+            'content-length': Buffer.byteLength(postData)
+        }
+    };
+
+    return new Promise((resolve, reject) => {
+        const req = https.request(options, (res) => {
+            let data = '';
+            res.on('data', chunk => data += chunk);
+            res.on('end', () => {
+                if (res.statusCode >= 200 && res.statusCode < 300) {
+                    console.log('Message sent successfully via Brevo HTTP API:', data);
+                    resolve(data);
+                } else {
+                    console.error('Brevo API Error:', res.statusCode, data);
+                    reject(new Error(`Brevo API Error ${res.statusCode}: ${data}`));
+                }
+            });
         });
 
-        if (error) {
-            console.error('Resend API Error:', error);
-            return;
-        }
+        req.on('error', (e) => {
+            console.error('Network Error sending email via Brevo:', e.message);
+            reject(e);
+        });
 
-        console.log('Message sent via Resend successfully:', data);
-    } catch (error) {
-        console.error('Error sending email:', error);
-    }
+        req.write(postData);
+        req.end();
+    });
 };
 
 async function sendRegistrationEmail(userEmail, name) {
