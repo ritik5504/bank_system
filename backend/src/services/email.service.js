@@ -1,32 +1,31 @@
 const https = require('https');
 
-// Function to send email via Brevo native HTTP API (no external libraries needed)
-const sendEmail = async (to, subject, text, html) => {
-    // IMPORTANT: It will use the local env variable when deployed
-    const apiKey = process.env.BREVO_API_KEY;
-    const fromEmail = process.env.EMAIL_USER || 'rajsahil5504@gmail.com'; 
-
-    if (!process.env.BREVO_API_KEY) {
-        console.warn("BREVO_API_KEY is not explicitly set in environment variables!");
-    }
+// Send email using EmailJS REST API
+const sendEmailJS = async (to, subject, text, otp) => {
+    const serviceId = process.env.EMAILJS_SERVICE_ID || "service_7r79onc";
+    const templateId = process.env.EMAILJS_TEMPLATE_ID || "template_xrx4fl9";
+    const publicKey = process.env.EMAILJS_PUBLIC_KEY || "hD-uc0eDDl6mhHm4m";
 
     const postData = JSON.stringify({
-        sender: { name: "Backend Ledger", email: fromEmail },
-        to: [{ email: to }],
-        subject: subject,
-        htmlContent: html,
-        textContent: text
+        service_id: serviceId,
+        template_id: templateId,
+        user_id: publicKey,
+        template_params: {
+            to_email: to,
+            to_name: to.split('@')[0],
+            subject: subject,
+            message: text,
+            otp: otp || ""
+        }
     });
 
     const options = {
-        hostname: 'api.brevo.com',
-        path: '/v3/smtp/email',
+        hostname: 'api.emailjs.com',
+        path: '/api/v1.0/email/send',
         method: 'POST',
         headers: {
-            'accept': 'application/json',
-            'api-key': apiKey,
-            'content-type': 'application/json',
-            'content-length': Buffer.byteLength(postData)
+            'Content-Type': 'application/json',
+            'Content-Length': Buffer.byteLength(postData)
         }
     };
 
@@ -36,17 +35,17 @@ const sendEmail = async (to, subject, text, html) => {
             res.on('data', chunk => data += chunk);
             res.on('end', () => {
                 if (res.statusCode >= 200 && res.statusCode < 300) {
-                    console.log('Message sent successfully via Brevo HTTP API:', data);
+                    console.log('Message sent successfully via EmailJS HTTP API');
                     resolve(data);
                 } else {
-                    console.error('Brevo API Error:', res.statusCode, data);
-                    reject(new Error(`Brevo API Error ${res.statusCode}: ${data}`));
+                    console.error('EmailJS API Error:', res.statusCode, data);
+                    reject(new Error(`EmailJS Error ${res.statusCode}: ${data}`));
                 }
             });
         });
 
         req.on('error', (e) => {
-            console.error('Network Error sending email via Brevo:', e.message);
+            console.error('HTTPS Error sending email via EmailJS:', e);
             reject(e);
         });
 
@@ -57,44 +56,26 @@ const sendEmail = async (to, subject, text, html) => {
 
 async function sendRegistrationEmail(userEmail, name) {
     const subject = 'Welcome to Backend Ledger!';
-    const text = `Hello ${name},\n\nThank you for registering at Backend Ledger. We're excited to have you on board!\n\nBest regards,\nThe Backend Ledger Team`;
-    const html = `<p>Hello ${name},</p><p>Thank you for registering at Backend Ledger. We're excited to have you on board!</p><p>Best regards,<br>The Backend Ledger Team</p>`;
-
-    await sendEmail(userEmail, subject, text, html);
+    const text = `Hello ${name},\n\nThank you for registering at Backend Ledger. We're excited to have you on board!`;
+    await sendEmailJS(userEmail, subject, text, null);
 }
 
 async function sendTransactionEmail(userEmail, name, amount, toAccount) {
     const subject = 'Transaction Successful!';
-    const text = `Hello ${name},\n\nYour transaction of $${amount} to account ${toAccount} was successful.\n\nBest regards,\nThe Backend Ledger Team`;
-    const html = `<p>Hello ${name},</p><p>Your transaction of $${amount} to account ${toAccount} was successful.</p><p>Best regards,<br>The Backend Ledger Team</p>`;
-
-    await sendEmail(userEmail, subject, text, html);
+    const text = `Hello ${name},\n\nYour transaction of $${amount} to account ${toAccount} was successful.`;
+    await sendEmailJS(userEmail, subject, text, null);
 }
 
 async function sendTransactionFailureEmail(userEmail, name, amount, toAccount) {
     const subject = 'Transaction Failed';
-    const text = `Hello ${name},\n\nWe regret to inform you that your transaction of $${amount} to account ${toAccount} has failed. Please try again later.\n\nBest regards,\nThe Backend Ledger Team`;
-    const html = `<p>Hello ${name},</p><p>We regret to inform you that your transaction of $${amount} to account ${toAccount} has failed. Please try again later.</p><p>Best regards,<br>The Backend Ledger Team</p>`;
-
-    await sendEmail(userEmail, subject, text, html);
+    const text = `Hello ${name},\n\nWe regret to inform you that your transaction of $${amount} to account ${toAccount} has failed.`;
+    await sendEmailJS(userEmail, subject, text, null);
 }
 
 async function sendOtpEmail(userEmail, name, otp) {
     const subject = 'Your Verification OTP - Backend Ledger';
-    const text = `Hello ${name || 'User'},\n\nYour One-Time Password (OTP) for Verification is: ${otp}\n\nThis OTP is valid for 5 minutes. Do not share this code with anyone.\n\nBest regards,\nThe Backend Ledger Team`;
-    const html = `
-        <div style="font-family: Arial, sans-serif; padding: 20px; color: #333;">
-            <h2>Verification Required</h2>
-            <p>Hello ${name || 'User'},</p>
-            <p>Your One-Time Password (OTP) is:</p>
-            <h1 style="background: #f4f4f4; padding: 10px; text-align: center; letter-spacing: 5px; color: #2563eb;">${otp}</h1>
-            <p>This OTP is valid for <strong>5 minutes</strong>. Do not share this code with anyone.</p>
-            <br/>
-            <p>Best regards,<br>The Backend Ledger Team</p>
-        </div>
-    `;
-
-    await sendEmail(userEmail, subject, text, html);
+    const text = `Hello ${name || 'User'},\n\nYour One-Time Password (OTP) for Verification is: ${otp}\n\nThis OTP is valid for 5 minutes. Do not share this code with anyone.`;
+    await sendEmailJS(userEmail, subject, text, otp);
 }
 
 module.exports = {
