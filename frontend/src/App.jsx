@@ -5,6 +5,7 @@ import { ToastProvider } from './components/Toast';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { Auth } from './pages/Auth';
 import { Dashboard } from './pages/Dashboard';
+import { Landing } from './pages/Landing';
 
 function App() {
     return (
@@ -25,11 +26,11 @@ function App() {
                             }
                         />
 
-                        {/* Redirect root to dashboard (which will redirect to auth if not logged in) */}
-                        <Route path="/" element={<Navigate to="/dashboard" replace />} />
+                        {/* Redirect root to Landing page */}
+                        <Route path="/" element={<Landing />} />
 
                         {/* Catch all */}
-                        <Route path="*" element={<Navigate to="/dashboard" replace />} />
+                        <Route path="*" element={<Navigate to="/" replace />} />
                     </Routes>
                 </BrowserRouter>
             </AuthProvider>
